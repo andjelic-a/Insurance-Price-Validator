@@ -19,7 +19,8 @@ def validate_and_fix_prices(
     }
     """
 
-    fixed = prices.copy()
+    # TODO: FIX PLACEHOLDER
+    fixed: dict[str, float] = prices.copy()
     issues: list[str] = []
 
     rules = [
@@ -43,7 +44,7 @@ def validate_and_fix_prices(
             issues.append(
                 f"Rule violated: {cheaper} must be strictly less than {expensive}!"
             )
-            # sad match string po tipu proizvoda i onda sibni discount
+            # TODO: sad match string po tipu proizvoda i onda sibni discount
 
     return {  # pyright: ignore[reportUnknownVariableType]
         "fixed_prices": fixed,
