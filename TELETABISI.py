@@ -24,9 +24,8 @@ def validate_and_fix_prices(
     issues: list[str] = []
 
     rules = [
+        # TODO: Proveri da li je ordering dobar
         # gotovo
-        ("casco_200", "casco_100"),
-        ("casco_500", "casco_200"),
         #
         ("mtpl", "limited_casco_100"),
         ("mtpl", "limited_casco_200"),
@@ -43,6 +42,9 @@ def validate_and_fix_prices(
         # gotovo
         ("limited_casco_200", "limited_casco_100"),
         ("limited_casco_500", "limited_casco_200"),
+        #
+        ("casco_200", "casco_100"),
+        ("casco_500", "casco_200"),
     ]
 
     for cheaper, expensive in rules:
