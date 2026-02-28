@@ -46,7 +46,7 @@ def validate_and_fix_prices(
     ]
 
     for cheaper, expensive in rules:
-        if not prices[cheaper] < prices[expensive]:
+        if not fixed[cheaper] < fixed[expensive]:
             issues.append(
                 f"Rule violated: {cheaper} must be strictly less than {expensive}!"
             )
