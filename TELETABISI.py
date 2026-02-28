@@ -1,6 +1,6 @@
 ###
 ## NIKAKO NE SLATI SA IMPORTOM OVOGA DOLE, TO JE SAMO ZA TEST CASE (POGLEDAJ KOMENTAR U MAIN-u)
-from .data import test_cases
+from data import test_cases
 
 
 def validate_and_fix_prices(
