@@ -24,19 +24,25 @@ def validate_and_fix_prices(
     issues: list[str] = []
 
     rules = [
+        # gotovo
+        ("casco_200", "casco_100"),
+        ("casco_500", "casco_200"),
+        #
         ("mtpl", "limited_casco_100"),
         ("mtpl", "limited_casco_200"),
         ("mtpl", "limited_casco_500"),
+        #
         ("mtpl", "casco_100"),
         ("mtpl", "casco_200"),
         ("mtpl", "casco_500"),
+        #
         ("limited_casco_100", "casco_100"),
         ("limited_casco_200", "casco_200"),
         ("limited_casco_500", "casco_500"),
+        #
+        # gotovo
         ("limited_casco_200", "limited_casco_100"),
         ("limited_casco_500", "limited_casco_200"),
-        ("casco_200", "casco_100"),
-        ("casco_500", "casco_200"),
     ]
 
     for cheaper, expensive in rules:
@@ -44,7 +50,24 @@ def validate_and_fix_prices(
             issues.append(
                 f"Rule violated: {cheaper} must be strictly less than {expensive}!"
             )
-            # TODO: sad match string po tipu proizvoda i onda sibni discount
+
+            if (
+                cheaper.endswith("200")
+                or cheaper.endswith("500")
+                and cheaper[:-3] == expensive[:-3]
+            ):
+                base_key: str = cheaper[:-3] + "100"
+                percentage = 0.85 if cheaper.endswith("200") else 0.8
+
+                if base_key in prices:
+                    new_price = prices[base_key] * percentage
+                    fixed[cheaper] = new_price
+
+            elif cheaper[:-3] != expensive[:-3]:
+                # TODO: uradi inter-proizvodni kurac
+                print(cheaper + "," + expensive)
+                print(abs(fixed[cheaper] - fixed[expensive]))
+                continue
 
     return {  # pyright: ignore[reportUnknownVariableType]
         "fixed_prices": fixed,
@@ -110,10 +133,10 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------
     ### NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
     # ovde ide test
-    for test in test_cases:
-        res = validate_and_fix_prices(test)
-        for r, issue in res.items():
-            # print("-", example_prices)
-            print(r)
-            print(issue)  # pyright: ignore[reportUnknownArgumentType]
+    # for test in test_cases:
+    #     res = validate_and_fix_prices(test)
+    #     for r, issue in res.items():
+    #         # print("-", example_prices)
+    #         print(r)
+    #         print(issue)  # pyright: ignore[reportUnknownArgumentType]
     ###
