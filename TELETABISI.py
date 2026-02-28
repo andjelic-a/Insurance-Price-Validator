@@ -1,5 +1,6 @@
 ###
 ## NIKAKO NE SLATI SA IMPORTOM OVOGA DOLE, TO JE SAMO ZA TEST CASE (POGLEDAJ KOMENTAR U MAIN-u)
+
 from data import test_cases  # pyright: ignore[reportUnusedImport]
 
 
@@ -18,6 +19,9 @@ def validate_and_fix_prices(
     }
     """
 
+    fixed = prices.copy()
+    issues: list[str] = []
+
     rules = [
         ("mtpl", "limited_casco_100"),
         ("mtpl", "limited_casco_200"),
@@ -25,6 +29,9 @@ def validate_and_fix_prices(
         ("mtpl", "casco_100"),
         ("mtpl", "casco_200"),
         ("mtpl", "casco_500"),
+        ("limited_casco_100", "casco_100"),
+        ("limited_casco_200", "casco_200"),
+        ("limited_casco_500", "casco_500"),
         ("limited_casco_200", "limited_casco_100"),
         ("limited_casco_500", "limited_casco_200"),
         ("casco_200", "casco_100"),
@@ -33,11 +40,10 @@ def validate_and_fix_prices(
 
     for cheaper, expensive in rules:
         if not prices[cheaper] < prices[expensive]:
-            print(f"Rule violated {cheaper} > {expensive}!")
+            issues.append(
+                f"Rule violated: {cheaper} must be strictly less than {expensive}!"
+            )
             # sad match string po tipu proizvoda i onda sibni discount
-
-    fixed = prices.copy()
-    issues = []
 
     return {  # pyright: ignore[reportUnknownVariableType]
         "fixed_prices": fixed,
@@ -48,7 +54,7 @@ def validate_and_fix_prices(
 """
 Product Hierarchy Rules
 
-The general cost relationship must hold: NTPL < Limited Casco < Casco
+The general cost relationship must hold: MTPL < Limited Casco < Casco
 
 Specifically:
 
@@ -90,10 +96,6 @@ if __name__ == "__main__":
         example_prices  # pyright: ignore[reportArgumentType]
     )
 
-    ### NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
-    # ovde ide test
-    ###
-
     print(
         "Fixed prices:",
         result["fixed_prices"],  # pyright: ignore[reportUnknownArgumentType]
@@ -101,4 +103,16 @@ if __name__ == "__main__":
 
     print("Issues found:")
     for issue in result["issues"]:
-        print("-", issue)
+        # print("-", example_prices)
+        print(issue)  # pyright: ignore[reportUnknownArgumentType]
+
+    # --------------------------------------------------------------------
+    ### NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
+    # ovde ide test
+    for test in test_cases:
+        res = validate_and_fix_prices(test)
+        for r, issue in res.items():
+            # print("-", example_prices)
+            print(r)
+            print(issue)  # pyright: ignore[reportUnknownArgumentType]
+    ###
