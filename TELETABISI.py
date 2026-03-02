@@ -42,6 +42,9 @@ def validate_and_fix_prices(
         #
         ("casco_200", "casco_100", "deductible"),
         ("casco_500", "casco_200", "deductible"),
+        # #
+        # ("mtpl", "limited_casco_500", "ordering"),
+        # ("limited_casco_100", "casco_500", "ordering"),
     ]
 
     MARKET_AVERAGES = {
@@ -76,6 +79,19 @@ def validate_and_fix_prices(
                     / MARKET_AVERAGES[cheaper_product]
                 )
 
+                if (
+                    cheaper == "mtpl"
+                    and fixed["limited_casco_100"] < fixed["mtpl"]
+                    and fixed["casco_100"] < fixed["mtpl"]
+                ):
+                    new_price = fixed[expensive] / ratio
+                    issues.append(
+                        f"{cheaper} was above {expensive} ({fixed[cheaper]:.2f} > {fixed[expensive]:.2f}). "
+                        f"Lowered {cheaper} to {new_price:.2f} using market ratio of {ratio:.2f}."
+                    )
+                    fixed[cheaper] = new_price
+                    continue
+
                 new_price = ratio * fixed[cheaper]
                 fixed[expensive] = new_price
 
@@ -83,6 +99,42 @@ def validate_and_fix_prices(
                     f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f}). "
                     f"Raised {expensive} to {new_price:.2f} using market ratio of {ratio:.2f}."  # pyright: ignore[reportImplicitStringConcatenation]
                 )
+
+            # elif rule_type == "ordering":
+            #     expensive_product = get_product(expensive)
+            #     cheaper_product = get_product(cheaper)
+
+            #     ratio = (
+            #         MARKET_AVERAGES[expensive_product]
+            #         / MARKET_AVERAGES[cheaper_product]
+            #     )
+
+            #     fix_base = expensive[:-3] + "100"
+
+            #     new_price = fixed[cheaper] * ratio
+            #     fixed[fix_base] = new_price
+
+            #     issues.append(
+            #         f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f})."
+            #         f"Raised {expensive} to {new_price:.2f} using market ratio of {ratio:.2f}."
+            #     )
+
+            #     for postfix in ["_200", "_500"]:
+            #         percentage = 0.85 if postfix == "_200" else 0.8
+            #         base_key = (
+            #             cheaper_product
+            #             if cheaper_product == "mtpl"
+            #             else cheaper_product + "_100"
+            #         )
+            #         old_price = fixed[expensive_product + postfix]
+            #         new_price = fixed[base_key] * percentage
+
+            #         issues.append(
+            #             f"{expensive_product + postfix} was below {base_key} "
+            #             f"({old_price:.2f} < {fixed[base_key]:.2f}). "
+            #             f"Lowered to {new_price:.2f}."
+            #         )
+            #         fixed[expensive_product + postfix] = new_price
 
     return {  # pyright: ignore[reportUnknownVariableType]
         "fixed_prices": fixed,
