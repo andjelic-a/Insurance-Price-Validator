@@ -25,10 +25,11 @@ def validate_and_fix_prices(
 
     rules = [
         ("mtpl", "limited_casco_100", "inter"),
+        ("mtpl", "casco_100", "inter"),
+        #
         ("mtpl", "limited_casco_200", "inter"),
         ("mtpl", "limited_casco_500", "inter"),
         #
-        ("mtpl", "casco_100", "inter"),
         ("mtpl", "casco_200", "inter"),
         ("mtpl", "casco_500", "inter"),
         #
@@ -99,11 +100,12 @@ example_prices = {
     "casco_500": 830,
 }
 
+
 if __name__ == "__main__":
     result = validate_and_fix_prices(  # pyright: ignore[reportUnknownVariableType]
         example_prices  # pyright: ignore[reportArgumentType]
     )
-
+    print(example_prices)
     print(
         "Fixed prices:",
         result["fixed_prices"],  # pyright: ignore[reportUnknownArgumentType]
@@ -117,11 +119,12 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------
     ## NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
     #    ovde ide test
-    # for test in test_cases:
-    #     print(test)
-    #     res = validate_and_fix_prices(test)
-    #     for r, issue in res.items():
-    #         # print("-", example_prices)
-    #         print(r)
-    #         print(issue)  # pyright: ignore[reportUnknownArgumentType]
+    for i, test in enumerate(test_cases):
+        print(f"\nCASE-----------------{i}----------------------------------")
+        print(test)
+        res = validate_and_fix_prices(test)
+        for r, issue in res.items():
+            # print("-", example_prices)
+            print(r)
+            print(issue)  # pyright: ignore[reportUnknownArgumentType]
     ##
