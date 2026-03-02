@@ -24,87 +24,70 @@ def validate_and_fix_prices(
     issues: list[str] = []
 
     rules = [
-        # TODO: Proveri da li je ordering dobar
-        # gotovo
+        ("mtpl", "limited_casco_100", "inter"),
+        ("mtpl", "limited_casco_200", "inter"),
+        ("mtpl", "limited_casco_500", "inter"),
         #
-        ("mtpl", "limited_casco_100"),
-        ("mtpl", "limited_casco_200"),
-        ("mtpl", "limited_casco_500"),
+        ("mtpl", "casco_100", "inter"),
+        ("mtpl", "casco_200", "inter"),
+        ("mtpl", "casco_500", "inter"),
         #
-        ("mtpl", "casco_100"),
-        ("mtpl", "casco_200"),
-        ("mtpl", "casco_500"),
+        ("limited_casco_100", "casco_100", "inter"),
+        ("limited_casco_200", "casco_200", "inter"),
+        ("limited_casco_500", "casco_500", "inter"),
         #
-        ("limited_casco_100", "casco_100"),
-        ("limited_casco_200", "casco_200"),
-        ("limited_casco_500", "casco_500"),
+        ("limited_casco_200", "limited_casco_100", "deductible"),
+        ("limited_casco_500", "limited_casco_200", "deductible"),
         #
-        # gotovo
-        ("limited_casco_200", "limited_casco_100"),
-        ("limited_casco_500", "limited_casco_200"),
-        #
-        ("casco_200", "casco_100"),
-        ("casco_500", "casco_200"),
+        ("casco_200", "casco_100", "deductible"),
+        ("casco_500", "casco_200", "deductible"),
     ]
 
-    for cheaper, expensive in rules:
-        if not fixed[cheaper] < fixed[expensive]:
-            issues.append(
-                f"Rule violated: {cheaper} must be strictly less than {expensive}!"
-            )
+    MARKET_AVERAGES = {
+        "mtpl": 500,
+        "limited_casco": 900,
+        "casco": 1200,
+    }
 
-            if (
-                cheaper.endswith("200")
-                or cheaper.endswith("500")
-                and cheaper[:-3] == expensive[:-3]
-            ):
+    def get_product(key: str) -> str:
+        parts = key.rsplit("_", 1)
+        return parts[0] if parts[-1] in ("100", "200", "500") else key
+
+    for cheaper, expensive, rule_type in rules:
+        if not fixed[cheaper] < fixed[expensive]:
+            if rule_type == "deductible":
                 base_key: str = cheaper[:-3] + "100"
                 percentage = 0.85 if cheaper.endswith("200") else 0.8
 
                 if base_key in prices:
-                    new_price = prices[base_key] * percentage
+                    new_price = fixed[base_key] * percentage
                     fixed[cheaper] = new_price
+                    issues.append(
+                        f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f}). "
+                    )
 
-            elif cheaper[:-3] != expensive[:-3]:
-                # TODO: uradi inter-proizvodni kurac
-                print(cheaper + "," + expensive)
-                print(abs(fixed[cheaper] - fixed[expensive]))
-                continue
+            elif rule_type == "inter":
+                expensive_product = get_product(expensive)
+                cheaper_product = get_product(cheaper)
+
+                ratio = (
+                    MARKET_AVERAGES[expensive_product]
+                    / MARKET_AVERAGES[cheaper_product]
+                )
+
+                new_price = ratio * fixed[cheaper]
+                fixed[expensive] = new_price
+
+                issues.append(
+                    f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f}). "
+                    f"Raised {expensive} to {new_price:.2f} using market ratio of {ratio:.2f}."  # pyright: ignore[reportImplicitStringConcatenation]
+                )
 
     return {  # pyright: ignore[reportUnknownVariableType]
         "fixed_prices": fixed,
         "issues": issues,
     }
 
-
-"""
-Product Hierarchy Rules
-
-The general cost relationship must hold: MTPL < Limited Casco < Casco
-
-Specifically:
-
-    mtpl < limited_casco_100
-    mtpl < limited_casco_200
-    mtpl < limited_casco_500
-    limited_casco_100 < casco_100
-    limited_casco_200 < casco_200
-    limited_casco_500 < casco_500
-
-Deductible Ordering Rules
-
-A higher deductible means a lower premium: price(500€) < price(200€) < price(100€)
-
-For Limited Casco:
-
-    limited_casco_200 < limited_casco_100
-    limited_casco_500 < limited_casco_200
-
-For Casco:
-
-    casco_200 < casco_100
-    casco_500 < casco_200
-"""
 
 example_prices = {
     "mtpl": 400,
@@ -117,7 +100,6 @@ example_prices = {
 }
 
 if __name__ == "__main__":
-
     result = validate_and_fix_prices(  # pyright: ignore[reportUnknownVariableType]
         example_prices  # pyright: ignore[reportArgumentType]
     )
@@ -133,12 +115,13 @@ if __name__ == "__main__":
         print(issue)  # pyright: ignore[reportUnknownArgumentType]
 
     # --------------------------------------------------------------------
-    ### NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
-    # ovde ide test
+    ## NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
+    #    ovde ide test
     # for test in test_cases:
+    #     print(test)
     #     res = validate_and_fix_prices(test)
     #     for r, issue in res.items():
     #         # print("-", example_prices)
     #         print(r)
     #         print(issue)  # pyright: ignore[reportUnknownArgumentType]
-    ###
+    ##
