@@ -1,4 +1,4 @@
-# from data import test_cases  # pyright: ignore[reportUnusedImport]
+# from data import test_cases
 
 
 # TELETABISI.py
@@ -16,7 +16,6 @@ def validate_and_fix_prices(
     }
     """
 
-    # TODO: FIX PLACEHOLDER
     fixed: dict[str, float] = prices.copy()
     issues: list[str] = []
 
@@ -61,7 +60,6 @@ def validate_and_fix_prices(
                     new_price = fixed[base_key] * percentage
                     fixed[cheaper] = new_price
 
-                # If violation still not resolved, recalculate the other side from baseline too
                 if not fixed[cheaper] < fixed[expensive]:
                     exp_percentage = 0.85 if expensive.endswith("200") else 0.8
                     exp_base_key = expensive[:-3] + "100"
@@ -180,8 +178,6 @@ if __name__ == "__main__":
         print(issue)  # pyright: ignore[reportUnknownArgumentType]
 
     # # --------------------------------------------------------------------
-    # ## NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
-    # #    ovde ide test
     # for i, test in enumerate(test_cases):
     #     print(f"\nCASE-----------------{i}----------------------------------")
     #     print(test)
