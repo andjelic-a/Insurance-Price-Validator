@@ -1,7 +1,4 @@
-###
-## NIKAKO NE SLATI SA IMPORTOM OVOGA DOLE, TO JE SAMO ZA TEST CASE (POGLEDAJ KOMENTAR U MAIN-u)
-
-from data import test_cases  # pyright: ignore[reportUnusedImport]
+# from data import test_cases  # pyright: ignore[reportUnusedImport]
 
 
 # TELETABISI.py
@@ -42,9 +39,6 @@ def validate_and_fix_prices(
         #
         ("casco_200", "casco_100", "deductible"),
         ("casco_500", "casco_200", "deductible"),
-        # #
-        # ("mtpl", "limited_casco_500", "ordering"),
-        # ("limited_casco_100", "casco_500", "ordering"),
     ]
 
     MARKET_AVERAGES = {
@@ -66,8 +60,26 @@ def validate_and_fix_prices(
                 if base_key in prices:
                     new_price = fixed[base_key] * percentage
                     fixed[cheaper] = new_price
+
+                # If violation still not resolved, recalculate the other side from baseline too
+                if not fixed[cheaper] < fixed[expensive]:
+                    exp_percentage = 0.85 if expensive.endswith("200") else 0.8
+                    exp_base_key = expensive[:-3] + "100"
+
+                    if exp_base_key in fixed:
+                        old_exp = fixed[expensive]
+                        fixed[expensive] = fixed[exp_base_key] * exp_percentage
+                        issues.append(
+                            f"[DEDUCTIBLE RULE FOLLOWUP] After adjusting '{cheaper}' to {fixed[cheaper]:.2f}, "  # pyright: ignore[reportImplicitStringConcatenation]
+                            f"'{expensive}' ({old_exp:.2f}) was still not above it. "
+                            f"Recalculated '{expensive}' to {fixed[expensive]:.2f} "
+                            f"({exp_percentage * 100:.0f}% of base '{exp_base_key}' = {fixed[exp_base_key]:.2f})."
+                        )
+
                     issues.append(
-                        f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f}). "
+                        f"[DEDUCTIBLE RULE] '{expensive}' ({fixed[expensive]:.2f}) was priced BELOW '{cheaper}' ({prices[cheaper]:.2f}), "  # pyright: ignore[reportImplicitStringConcatenation]
+                        f"but higher deductibles must always be cheaper. "
+                        f"Adjusted '{cheaper}' to {new_price:.2f} ({percentage * 100:.0f}% of base '{base_key}' = {fixed[base_key]:.2f})."  # pyright: ignore[reportPossiblyUnboundVariable]
                     )
 
             elif rule_type == "inter":
@@ -79,62 +91,61 @@ def validate_and_fix_prices(
                     / MARKET_AVERAGES[cheaper_product]
                 )
 
-                if (
-                    cheaper == "mtpl"
-                    and fixed["limited_casco_100"] < fixed["mtpl"]
-                    and fixed["casco_100"] < fixed["mtpl"]
-                ):
-                    new_price = fixed[expensive] / ratio
-                    issues.append(
-                        f"{cheaper} was above {expensive} ({fixed[cheaper]:.2f} > {fixed[expensive]:.2f}). "
-                        f"Lowered {cheaper} to {new_price:.2f} using market ratio of {ratio:.2f}."
-                    )
-                    fixed[cheaper] = new_price
-                    continue
-
-                new_price = ratio * fixed[cheaper]
-                fixed[expensive] = new_price
-
-                issues.append(
-                    f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f}). "
-                    f"Raised {expensive} to {new_price:.2f} using market ratio of {ratio:.2f}."  # pyright: ignore[reportImplicitStringConcatenation]
+                cheaper_violation_count = sum(
+                    1
+                    for c, e, r in rules
+                    if r == "inter" and c == cheaper and fixed[c] >= fixed[e]
+                )
+                expensive_violation_count = sum(
+                    1
+                    for c, e, r in rules
+                    if r == "inter" and e == expensive and fixed[c] >= fixed[e]
                 )
 
-            # elif rule_type == "ordering":
-            #     expensive_product = get_product(expensive)
-            #     cheaper_product = get_product(cheaper)
-
-            #     ratio = (
-            #         MARKET_AVERAGES[expensive_product]
-            #         / MARKET_AVERAGES[cheaper_product]
-            #     )
-
-            #     fix_base = expensive[:-3] + "100"
-
-            #     new_price = fixed[cheaper] * ratio
-            #     fixed[fix_base] = new_price
-
-            #     issues.append(
-            #         f"{expensive} was below {cheaper} ({fixed[expensive]:.2f} < {fixed[cheaper]:.2f})."
-            #         f"Raised {expensive} to {new_price:.2f} using market ratio of {ratio:.2f}."
-            #     )
-
-            #     for postfix in ["_200", "_500"]:
-            #         percentage = 0.85 if postfix == "_200" else 0.8
-            #         base_key = (
-            #             cheaper_product
-            #             if cheaper_product == "mtpl"
-            #             else cheaper_product + "_100"
-            #         )
-            #         old_price = fixed[expensive_product + postfix]
-            #         new_price = fixed[base_key] * percentage
-
-            #         issues.append(
-            #             f"{expensive_product + postfix} was below {base_key} "
-            #             f"({old_price:.2f} < {fixed[base_key]:.2f}). "
-            #             f"Lowered to {new_price:.2f}."
-            #         )
-            #         fixed[expensive_product + postfix] = new_price
+                if cheaper_violation_count > expensive_violation_count:
+                    new_price = fixed[expensive] / ratio
+                    issues.append(
+                        f"[PRODUCT ORDER RULE] '{cheaper}' ({prices[cheaper]:.2f}) was priced ABOVE '{expensive}' ({prices[expensive]:.2f}), "  # pyright: ignore[reportImplicitStringConcatenation]
+                        f"but '{expensive}' must always be more expensive than '{cheaper}'. "
+                        f"'{cheaper}' appears in more violations, so it is the outlier. "
+                        f"Lowered '{cheaper}' from {prices[cheaper]:.2f} to {new_price:.2f} "
+                        f"using market ratio {expensive_product}/{cheaper_product} = {ratio:.2f} "
+                        f"(market averages: {expensive_product}={MARKET_AVERAGES[expensive_product]}, {cheaper_product}={MARKET_AVERAGES[cheaper_product]})."
+                    )
+                    fixed[cheaper] = new_price
+                    if cheaper.endswith("100"):
+                        for ded in ("_200", "_500"):
+                            percentage = 0.85 if ded.endswith("200") else 0.8
+                            ded_key = cheaper_product + ded
+                            old_ded = fixed[ded_key]
+                            fixed[ded_key] = fixed[cheaper] * percentage
+                            issues.append(
+                                f"[DEDUCTIBLE CASCADE] Recalculated '{ded_key}' from {old_ded:.2f} to {fixed[ded_key]:.2f} "  # pyright: ignore[reportImplicitStringConcatenation]
+                                f"({percentage * 100:.0f}% of updated base '{cheaper}' = {fixed[cheaper]:.2f}) "
+                                f"to keep deductible tiers consistent."
+                            )
+                else:
+                    new_price = fixed[cheaper] * ratio
+                    issues.append(
+                        f"[PRODUCT ORDER RULE] '{expensive}' ({prices[expensive]:.2f}) was priced BELOW '{cheaper}' ({prices[cheaper]:.2f}), "  # pyright: ignore[reportImplicitStringConcatenation]
+                        f"but '{expensive}' must always be more expensive than '{cheaper}'. "
+                        f"'{expensive}' appears in more violations, so it is the outlier. "
+                        f"Raised '{expensive}' from {prices[expensive]:.2f} to {new_price:.2f} "
+                        f"using market ratio {expensive_product}/{cheaper_product} = {ratio:.2f} "
+                        f"(market averages: {expensive_product}={MARKET_AVERAGES[expensive_product]}, {cheaper_product}={MARKET_AVERAGES[cheaper_product]})."
+                    )
+                    fixed[expensive] = new_price
+                    if expensive.endswith("100"):
+                        for ded in ("_200", "_500"):
+                            percentage = 0.85 if ded.endswith("200") else 0.8
+                            ded_key = expensive_product + ded
+                            old_ded = fixed[ded_key]
+                            fixed[ded_key] = fixed[expensive] * percentage
+                            issues.append(
+                                f"[DEDUCTIBLE CASCADE] Recalculated '{ded_key}' from {old_ded:.2f} to {fixed[ded_key]:.2f} "  # pyright: ignore[reportImplicitStringConcatenation]
+                                f"({percentage * 100:.0f}% of updated base '{expensive}' = {fixed[expensive]:.2f}) "
+                                f"to keep deductible tiers consistent."
+                            )
 
     return {  # pyright: ignore[reportUnknownVariableType]
         "fixed_prices": fixed,
@@ -168,15 +179,15 @@ if __name__ == "__main__":
         # print("-", example_prices)
         print(issue)  # pyright: ignore[reportUnknownArgumentType]
 
-    # --------------------------------------------------------------------
-    ## NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
-    #    ovde ide test
-    for i, test in enumerate(test_cases):
-        print(f"\nCASE-----------------{i}----------------------------------")
-        print(test)
-        res = validate_and_fix_prices(test)
-        for r, issue in res.items():
-            # print("-", example_prices)
-            print(r)
-            print(issue)  # pyright: ignore[reportUnknownArgumentType]
+    # # --------------------------------------------------------------------
+    # ## NIKAKO OVO ISPOD NE SLATI, TO SU NASI TEST PRIMERI
+    # #    ovde ide test
+    # for i, test in enumerate(test_cases):
+    #     print(f"\nCASE-----------------{i}----------------------------------")
+    #     print(test)
+    #     res = validate_and_fix_prices(test)
+    #     for r, issue in res.items():
+    #         # print("-", example_prices)
+    #         print(r)
+    #         print(issue)
     ##
